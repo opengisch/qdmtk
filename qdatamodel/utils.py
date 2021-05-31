@@ -10,7 +10,6 @@ class NonExtendedGeometry(Geometry):
     """
 
     as_binary = "ST_AsBinary"
-    from_text = "ST_GeomFromWKB"
 
 
 class Extent(GenericFunction):

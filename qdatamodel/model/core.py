@@ -37,9 +37,19 @@ Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 
 session = Session()
-session.add(
-    Building(name="my house", stories_count=4, geom="SRID=4326;POINT(6.14 46.20)")
-)
-session.add(Structure(name="your house", geom="SRID=4326;POINT(6.16 46.21)"))
-session.commit()
+if session.query(Building).count() == 0:
+    session.add(
+        Building(
+            name="my house",
+            stories_count=4,
+            geom="SRID=4326;POINT(6.14 46.20)",
+        )
+    )
+    session.add(
+        Structure(
+            name="your house",
+            geom="SRID=4326;POINT(6.16 46.21)",
+        )
+    )
+    session.commit()
 session.close()

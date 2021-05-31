@@ -111,9 +111,6 @@ class FeatureSource(QgsAbstractFeatureSource):
 
 
 class Provider(QgsVectorDataProvider):
-
-    next_feature_id = 1
-
     @classmethod
     def providerKey(cls):
         """Returns the memory provider key"""
@@ -212,7 +209,7 @@ class Provider(QgsVectorDataProvider):
                 value = f.attribute(attr.key)
                 if value == NULL:
                     value = None
-                setattr(row, attr.key, f.attribute(attr.key))
+                setattr(row, attr.key, value)
             session.add(row)
         session.commit()
         return True, flist

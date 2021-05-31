@@ -3,7 +3,8 @@ import tempfile
 
 from sqlalchemy import Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.event import listen
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import column_property, declarative_base, sessionmaker
+from sqlalchemy.sql.expression import cast
 
 from ..utils import NonExtendedGeometry
 
@@ -15,6 +16,7 @@ class Structure(Base):
     id = Column(Integer, primary_key=True)
     geom = Column(NonExtendedGeometry("POINT", srid=4326, management=True))
     name = Column(String)
+    label = column_property(name + "(" + cast(id, String) + ")")
 
 
 class Building(Structure):
@@ -45,6 +47,7 @@ Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)
 
+# Initial data
 session = Session()
 if session.query(Building).count() == 0:
     session.add(

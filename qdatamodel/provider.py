@@ -3,8 +3,9 @@ Adapted from example in https://github.com/qgis/QGIS/blob/master/tests/src/pytho
 
 """
 
-from geoalchemy2.functions import ST_Collect
+from geoalchemy2.functions import ST_Collect, ST_GeomFromText, ST_Intersects
 from qgis.core import (
+    NULL,
     QgsAbstractFeatureIterator,
     QgsAbstractFeatureSource,
     QgsCoordinateReferenceSystem,
@@ -30,7 +31,7 @@ from .utils import MaxX, MaxY, MinX, MinY
 class FeatureIterator(QgsAbstractFeatureIterator):
     def __init__(self, source, request):
         super().__init__(request)
-        self.request = request if request is not None else QgsFeatureRequest()
+        self.request = request
         self.source = source
 
         self.rewind()
@@ -70,9 +71,27 @@ class FeatureIterator(QgsAbstractFeatureIterator):
     def rewind(self):
         """reset the iterator to the starting position"""
         self.session = Session()
-        self.iterator = iter(self.session.query(self.source.provider.model).all())
+
+        query = self.session.query(self.source.provider.model)
+
+        filter_rect = self.request.filterRect()
+        if not filter_rect.isNull():
+            # TODO : probably need to transform rect CRS if needed like this
+            # transform = QgsCoordinateTransform()
+            # if self.request.destinationCrs().isValid() and self.request.destinationCrs() != self.source.provider.crs():
+            #     transform = QgsCoordinateTransform(self.source.provider.crs(), self.request.destinationCrs(), self.request.transformContext())
+
+            query = query.filter(
+                ST_Intersects(
+                    ST_GeomFromText(filter_rect.asWktPolygon()),
+                    self.source.provider.model.geom,
+                )
+            )
+
+        # TODO : implement rest of filter, such as order_by, select by id, etc. (and expression ?)
+
+        self.iterator = iter(query.all())
         self.session.close()
-        # self.iterator = iter([])
         return True
 
     def close(self):
@@ -136,14 +155,9 @@ class Provider(QgsVectorDataProvider):
         return self.featureSource().getFeatures(request)
 
     def uniqueValues(self, fieldIndex, limit=1):
-        results = set()
-        if fieldIndex >= 0 and fieldIndex < self.fields().count():
-            req = QgsFeatureRequest()
-            req.setFlags(QgsFeatureRequest.NoGeometry)
-            req.setSubsetOfAttributes([fieldIndex])
-            for f in self.getFeatures(req):
-                results.add(f.attributes()[fieldIndex])
-        return results
+        field = self._attrs_map()[fieldIndex]
+        session = Session()
+        return [r[0] for r in session.query(getattr(self.model, field)).distinct()]
 
     def wkbType(self):
         return QgsWkbTypes.parseType(
@@ -162,6 +176,12 @@ class Provider(QgsVectorDataProvider):
             if field.key == "geom":
                 continue
             yield field
+
+    def _attrs_map(self) -> "dict[int, str]":
+        """
+        Returns a dict that maps field idx to field name
+        """
+        return {i: attr.key for i, attr in enumerate(self._attrs())}
 
     def fields(self):
         fields = QgsFields()
@@ -186,12 +206,16 @@ class Provider(QgsVectorDataProvider):
         session = Session()
         for f in flist:
             row = self.model()
-            row.geom = f.geometry().asWkb()
+            # row.geom = f.geometry().asWkb()  # doesn't work...
+            row.geom = ST_GeomFromText(f.geometry().asWkt(), 4326)
             for attr in self._attrs():
-                f.setAttribute(attr, getattr(row, attr.key))
+                value = f.attribute(attr.key)
+                if value == NULL:
+                    value = None
+                setattr(row, attr.key, f.attribute(attr.key))
             session.add(row)
         session.commit()
-        return True
+        return True, flist
 
     def deleteFeatures(self, ids):
         session = Session()
@@ -202,7 +226,7 @@ class Provider(QgsVectorDataProvider):
         session.commit()
 
     def changeAttributeValues(self, attr_map):
-        attrs_map = {i: attr.key for i, attr in enumerate(self._attrs())}
+        attrs_map = self._attrs_map()
         session = Session()
         for fid, attrs in attr_map.items():
             row = session.query(self.model).get(fid)
@@ -215,7 +239,8 @@ class Provider(QgsVectorDataProvider):
         session = Session()
         for feature_id, geometry in geometry_map.items():
             row = session.query(self.model).get(feature_id)
-            row.geom = geometry.asWkb()
+            # row.geom = geometry.asWkb()  # doesn't work...
+            row.geom = ST_GeomFromText(geometry.asWkt(), 4326)
         session.commit()
         return True
 

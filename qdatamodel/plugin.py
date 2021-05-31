@@ -50,6 +50,9 @@ class Plugin:
         building = QgsVectorLayer("Building", "Buildings", Provider.providerKey())
         QgsProject.instance().addMapLayer(building)
 
+        monument = QgsVectorLayer("Monument", "Monuments", Provider.providerKey())
+        QgsProject.instance().addMapLayer(monument)
+
         self.iface.messageBar().pushMessage(
             "Success", "Running Datamodel", level=Qgis.Info
         )

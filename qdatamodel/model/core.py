@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from sqlalchemy import Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.event import listen
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -20,8 +23,14 @@ class Building(Structure):
     stories_count = Column(Integer)
 
 
-# engine = create_engine("sqlite:///:memory:")
-engine = create_engine(r"sqlite:///C:\Users\Olivier\Desktop\testtada\test.db")
+class Monument(Structure):
+    __tablename__ = "monuments"
+    id = Column(Integer, ForeignKey("structures.id"), primary_key=True)
+    tripadvisor_rating = Column(Integer)
+
+
+db_path = os.path.join(tempfile.gettempdir(), "qdatamodel.db")
+engine = create_engine(f"sqlite:///{db_path}", echo=False)
 
 
 def load_spatialite(dbapi_conn, connection_record):

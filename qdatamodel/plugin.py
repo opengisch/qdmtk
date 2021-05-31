@@ -2,6 +2,7 @@ import os.path
 
 from qgis.core import (
     Qgis,
+    QgsMessageLog,
     QgsProject,
     QgsProviderMetadata,
     QgsProviderRegistry,
@@ -10,6 +11,7 @@ from qgis.core import (
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
+from .model.core import Building, Session, Structure
 from .provider import Provider
 
 
@@ -44,10 +46,16 @@ class Plugin:
 
     def init_datamodel(self, checked):
 
-        structure = QgsVectorLayer("Structure", "test", "pythonprovider")
+        session = Session()
+        s = session.query(Structure).count()
+        b = session.query(Building).count()
+        QgsMessageLog.logMessage(f"structures : {s} / buildings : {b}", "TEST")
+        session.close()
+
+        structure = QgsVectorLayer("Structure", "test", Provider.providerKey())
         QgsProject.instance().addMapLayer(structure)
 
-        building = QgsVectorLayer("Building", "test", "pythonprovider")
+        building = QgsVectorLayer("Building", "test", Provider.providerKey())
         QgsProject.instance().addMapLayer(building)
 
         self.iface.messageBar().pushMessage(

@@ -19,7 +19,7 @@ class Building(Structure):
     stories_count = Column(Integer)
 
 
-engine = create_engine("sqlite:///:memory:", echo=True)
+engine = create_engine("sqlite:///:memory:")
 
 
 def load_spatialite(dbapi_conn, connection_record):
@@ -36,7 +36,8 @@ Session = sessionmaker(bind=engine)
 
 session = Session()
 session.add(
-    Building(name="my house", stories_count=4, geom="SRID=4326;POINT(46.20 6.14)")
+    Building(name="my house", stories_count=4, geom="SRID=4326;POINT(6.14 46.20)")
 )
-session.add(Structure(name="your house", geom="SRID=4326;POINT(46.21 6.16)"))
+session.add(Structure(name="your house", geom="SRID=4326;POINT(6.16 46.21)"))
 session.commit()
+session.close()

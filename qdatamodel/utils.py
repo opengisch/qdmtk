@@ -3,6 +3,16 @@ from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import Numeric
 
 
+class NonExtendedGeometry(Geometry):
+    """
+    GeoAlchemy2's Geometry use EWKB by default, preventing us from using QgsGeometry.fromWkb
+    directly. Thiss ubclass uses WKB instead
+    """
+
+    as_binary = "ST_AsBinary"
+    from_text = "ST_GeomFromWKB"
+
+
 class Extent(GenericFunction):
     type = Geometry
     package = "geo"

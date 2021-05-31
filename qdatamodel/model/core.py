@@ -1,7 +1,8 @@
-from geoalchemy2 import Geometry
 from sqlalchemy import Column, ForeignKey, Integer, String, create_engine
 from sqlalchemy.event import listen
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+from ..utils import NonExtendedGeometry
 
 Base = declarative_base()
 
@@ -9,7 +10,7 @@ Base = declarative_base()
 class Structure(Base):
     __tablename__ = "structures"
     id = Column(Integer, primary_key=True)
-    geom = Column(Geometry("POINT", srid=4326, management=True))
+    geom = Column(NonExtendedGeometry("POINT", srid=4326, management=True))
     name = Column(String)
 
 
@@ -19,7 +20,8 @@ class Building(Structure):
     stories_count = Column(Integer)
 
 
-engine = create_engine("sqlite:///:memory:")
+# engine = create_engine("sqlite:///:memory:")
+engine = create_engine(r"sqlite:///C:\Users\Olivier\Desktop\testtada\test.db")
 
 
 def load_spatialite(dbapi_conn, connection_record):

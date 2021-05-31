@@ -1,3 +1,8 @@
+"""
+Adapted from example in https://github.com/qgis/QGIS/blob/master/tests/src/python/provider_python.py
+
+"""
+
 from geoalchemy2.functions import ST_Collect
 from qgis.core import (
     QgsAbstractFeatureIterator,
@@ -8,6 +13,7 @@ from qgis.core import (
     QgsFeatureRequest,
     QgsField,
     QgsFields,
+    QgsGeometry,
     QgsMessageLog,
     QgsRectangle,
     QgsVectorDataProvider,
@@ -34,10 +40,21 @@ class FeatureIterator(QgsAbstractFeatureIterator):
         # QgsMessageLog.logMessage("FeatureIterator.fetchFeature(...)", "debug_provider")
         try:
             row = next(self.iterator)
-            f.setGeometry(row.geom)
+            # print("FETCHING")
+            # print(repr(row.geom.data))
+            # data = bytes.fromhex(row.geom.data) # may require adaptation on postgis
+            data = row.geom.data
+            geom = QgsGeometry()
+            geom.fromWkb(data)
+            print(f"Geometry is : {geom}")
+            f.setGeometry(geom)
             # self.geometryToDestinationCrs(f, self._transform)
             f.setFields(self.source.provider.fields())
-            f.setAttributes(row.__dict__())
+            fields = inspect(self.source.provider.model).attrs
+            for field in fields:
+                if field.key == "geom":
+                    continue
+                f.setAttribute(field.key, getattr(row, field.key))
             f.setValid(True)
             f.setId(row.id)
             return True
@@ -59,8 +76,9 @@ class FeatureIterator(QgsAbstractFeatureIterator):
         """reset the iterator to the starting position"""
         # QgsMessageLog.logMessage("FeatureIterator.rewind(...)", "debug_provider")
         self.session = Session()
-        # self.iterator = iter(self.session.query(self.source.provider.model).all())
-        self.iterator = iter([])
+        self.iterator = iter(self.session.query(self.source.provider.model).all())
+        self.session.close()
+        # self.iterator = iter([])
         return True
 
     def close(self):
@@ -74,13 +92,13 @@ class FeatureIterator(QgsAbstractFeatureIterator):
 class FeatureSource(QgsAbstractFeatureSource):
     def __init__(self, provider):
         # QgsMessageLog.logMessage("FeatureSource.__init__(...)", "debug_provider")
-        super(FeatureSource, self).__init__()
+        super().__init__()
         self.provider = provider
 
     def getFeatures(self, request):
-        # QgsMessageLog.logMessage("FeatureSource.getFeatures(...)", "debug_provider")
-        session = Session()
-        session.query(self.provider.model)
+        QgsMessageLog.logMessage("FeatureSource.getFeatures(...)", "debug_provider")
+        # session = Session()
+        # session.query(self.provider.model)
         return QgsFeatureIterator(FeatureIterator(self, request))
 
 
@@ -121,7 +139,7 @@ class Provider(QgsVectorDataProvider):
         self._extent = None
 
     def featureSource(self):
-        # QgsMessageLog.logMessage("Provider.featureSource(...)", "debug_provider")
+        QgsMessageLog.logMessage("Provider.featureSource(...)", "debug_provider")
         return FeatureSource(self)
 
     def dataSourceUri(self, expandAuthConfig=True):
@@ -133,8 +151,8 @@ class Provider(QgsVectorDataProvider):
         return self.providerKey()
 
     def getFeatures(self, request=QgsFeatureRequest()):
-        # QgsMessageLog.logMessage("Provider.getFeatures(...)", "debug_provider")
-        return QgsFeatureIterator(FeatureIterator(FeatureSource(self), request))
+        QgsMessageLog.logMessage("Provider.getFeatures(...)", "debug_provider")
+        return self.featureSource().getFeatures(request)
 
     def uniqueValues(self, fieldIndex, limit=1):
         # QgsMessageLog.logMessage("Provider.uniqueValues(...)", "debug_provider")
@@ -160,11 +178,13 @@ class Provider(QgsVectorDataProvider):
 
     def fields(self):
         # QgsMessageLog.logMessage("Provider.fields(...)", "debug_provider")
-        mapper = inspect(self.model)
-        fields = QgsFields()
-        for column in mapper.attrs:
-            fields.append(QgsField(column.key))
-        return fields
+        qgs_fields = QgsFields()
+        fields = inspect(self.model).attrs
+        for field in fields:
+            if field.key == "geom":
+                continue
+            qgs_fields.append(QgsField(field.key))  # TODO : field type
+        return qgs_fields
 
     def addFeatures(self, flist, flags=None):
         # QgsMessageLog.logMessage("Provider.addFeatures(...)", "debug_provider")

@@ -1,3 +1,1 @@
-sqlalchemy~=1.4.15
-geoalchemy2~=0.8.5
-alembic
+django~=3.2.3

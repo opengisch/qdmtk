@@ -3,7 +3,11 @@ Adapted from example in https://github.com/qgis/QGIS/blob/master/tests/src/pytho
 
 """
 
-from geoalchemy2.functions import ST_Collect, ST_GeomFromText, ST_Intersects
+import django
+import django.conf
+from django.contrib.gis.db.models import Extent
+from django.contrib.gis.geos import GEOSGeometry
+from django.db import models
 from qgis.core import (
     NULL,
     QgsAbstractFeatureIterator,
@@ -21,11 +25,6 @@ from qgis.core import (
     QgsWkbTypes,
 )
 from qgis.PyQt.QtCore import QVariant
-from sqlalchemy import inspect, types
-
-from .model import core
-from .model.core import Session
-from .utils import MaxX, MaxY, MinX, MinY
 
 
 class FeatureIterator(QgsAbstractFeatureIterator):
@@ -44,14 +43,14 @@ class FeatureIterator(QgsAbstractFeatureIterator):
             # Geometry
             geom = QgsGeometry()
             if row.geom is not None:
-                geom.fromWkb(row.geom.data)
+                geom.fromWkb(row.geom.wkb.tobytes())
             f.setGeometry(geom)
             # self.geometryToDestinationCrs(f, self._transform)
 
             # Fields
             f.setFields(self.source.provider.fields())
             for attr in self.source.provider._attrs():
-                f.setAttribute(attr.key, getattr(row, attr.key))
+                f.setAttribute(attr.name, getattr(row, attr.name))
 
             f.setValid(True)
             f.setId(row.id)
@@ -70,9 +69,8 @@ class FeatureIterator(QgsAbstractFeatureIterator):
 
     def rewind(self):
         """reset the iterator to the starting position"""
-        self.session = Session()
 
-        query = self.session.query(self.source.provider.model)
+        query = self.source.provider.model.objects
 
         filter_rect = self.request.filterRect()
         if not filter_rect.isNull():
@@ -80,24 +78,18 @@ class FeatureIterator(QgsAbstractFeatureIterator):
             # transform = QgsCoordinateTransform()
             # if self.request.destinationCrs().isValid() and self.request.destinationCrs() != self.source.provider.crs():
             #     transform = QgsCoordinateTransform(self.source.provider.crs(), self.request.destinationCrs(), self.request.transformContext())
-
             query = query.filter(
-                ST_Intersects(
-                    ST_GeomFromText(filter_rect.asWktPolygon()),
-                    self.source.provider.model.geom,
-                )
+                geom__intersects=GEOSGeometry(filter_rect.asWktPolygon())
             )
 
         # TODO : implement rest of filter, such as order_by, select by id, etc. (and expression ?)
 
         self.iterator = iter(query.all())
-        self.session.close()
         return True
 
     def close(self):
         """end of iterating: free the resources / lock"""
         self.iterator = None
-        self.session.close()
         return True
 
 
@@ -136,7 +128,17 @@ class Provider(QgsVectorDataProvider):
         super().__init__(uri)
 
         self.uri = uri
-        self.model = getattr(core, self.uri)
+
+        for model in django.apps.apps.get_models():
+            if model.__name__ == self.uri:
+                self.model = model
+                break
+        else:
+            known_models = [model.__name__ for model in django.apps.apps.get_models()]
+            raise Exception(
+                f"Could not find model {self.uri}. Known models are {known_models}"
+            )
+
         self._extent = None
 
     def featureSource(self):
@@ -153,24 +155,23 @@ class Provider(QgsVectorDataProvider):
 
     def uniqueValues(self, fieldIndex, limit=1):
         field = self._attrs_map()[fieldIndex]
-        session = Session()
-        return [r[0] for r in session.query(getattr(self.model, field)).distinct()]
+        return self.model.objects.values_list(field, flat=True).distinct()
 
     def wkbType(self):
-        return QgsWkbTypes.parseType(
-            inspect(self.model.geom).expression.type.geometry_type
-        )
+        return QgsWkbTypes.parseType(self.model.geom.field.geom_type)
 
     def featureCount(self):
-        session = Session()
-        return session.query(self.model).count()
+        return self.model.objects.count()
 
     def _attrs(self):
         """
         Yields SQLAlchemy's attributes (non-geom)
         """
-        for field in inspect(self.model).attrs:
-            if field.key == "geom":
+        for field in self.model._meta.get_fields():
+            if isinstance(field, (models.OneToOneField, models.ManyToOneRel)):
+                # Skip non-field attributes
+                continue
+            if field.name == "geom":
                 continue
             yield field
 
@@ -178,72 +179,59 @@ class Provider(QgsVectorDataProvider):
         """
         Returns a dict that maps field idx to field name
         """
-        return {i: attr.key for i, attr in enumerate(self._attrs())}
+        return {i: attr.name for i, attr in enumerate(self._attrs())}
 
     def fields(self):
         fields = QgsFields()
         for attr in self._attrs():
-            if isinstance(attr.expression.type, types.String):
+            if isinstance(attr, models.TextField) or isinstance(attr, models.CharField):
                 type_ = QVariant.String
-            elif isinstance(attr.expression.type, types.Integer):
+            elif isinstance(attr, models.IntegerField):
                 type_ = QVariant.Int
-            elif isinstance(attr.expression.type, types.Float) or isinstance(
-                attr.expression.type, types.Numeric
+            elif isinstance(attr, models.FloatField) or isinstance(
+                attr, models.DecimalField
             ):
                 type_ = QVariant.Double
             else:
                 QgsMessageLog.logMessage(
-                    f"Field type not configured : {attr.expression.type.__class__.__name__} ({attr.key} [{attr.expression.type}])",
+                    f"Field type not configured : {attr.__class__.__name__} ({attr.name})",
                 )
                 type_ = QVariant.Invalid
-            fields.append(QgsField(attr.key, type_))
+            fields.append(QgsField(attr.name, type_))
         return fields
 
     def addFeatures(self, flist, flags=None):
-        session = Session()
         for f in flist:
-            row = self.model()
-            # row.geom = f.geometry().asWkb()  # doesn't work...
-            row.geom = ST_GeomFromText(f.geometry().asWkt(), 4326)
+            instance = self.model()
+            instance.geom = GEOSGeometry(f.geometry().asWkt())
             for attr in self._attrs():
-                value = f.attribute(attr.key)
-                if value == NULL:
-                    value = None
-                setattr(row, attr.key, value)
-            session.add(row)
-        session.commit()
+                value = f.attribute(attr.name)
+                setattr(instance, attr.name, value if value != NULL else None)
+            instance.save()
         return True, flist
 
     def deleteFeatures(self, ids):
-        session = Session()
-        # TODO synchronize_session=True if we use transaction
-        session.query(self.model).filter(self.model.id.in_(ids)).delete(
-            synchronize_session=False
-        )
-        session.commit()
+        for instance in self.model.objects.filter(id__in=ids):
+            instance.delete()
 
     def changeAttributeValues(self, attr_map):
         attrs_map = self._attrs_map()
-        session = Session()
         for fid, attrs in attr_map.items():
-            row = session.query(self.model).get(fid)
-            for k, v in attrs.items():
-                setattr(row, attrs_map[k], v)
-        session.commit()
+            instance = self.model.objects.get(id=fid)
+            for k, value in attrs.items():
+                setattr(instance, attrs_map[k], value if value != NULL else None)
+            instance.save()
         return True
 
     def changeGeometryValues(self, geometry_map):
-        session = Session()
-        for feature_id, geometry in geometry_map.items():
-            row = session.query(self.model).get(feature_id)
-            # row.geom = geometry.asWkb()  # doesn't work...
-            row.geom = ST_GeomFromText(geometry.asWkt(), 4326)
-        session.commit()
+        for fid, geometry in geometry_map.items():
+            instance = self.model.objects.get(id=fid)
+            instance.geom = GEOSGeometry(geometry.asWkt())
+            instance.save()
         return True
 
     def allFeatureIds(self):
-        session = Session()
-        return session.query(self.model.id).all()
+        return self.model.objects.values_list("id", flat=True)
 
     def subsetString(self):
         return ""
@@ -274,21 +262,18 @@ class Provider(QgsVectorDataProvider):
         return self._extent
 
     def updateExtents(self):
-        session = Session()
-        geoms = ST_Collect(self.model.geom)
-        extents = session.query(
-            MinX(geoms), MinY(geoms), MaxX(geoms), MaxY(geoms)
-        ).one()
-        self._extent = QgsRectangle(
-            extents[0] or 0, extents[1] or 0, extents[2] or 0, extents[3] or 0
-        )
+        extents = self.model.objects.aggregate(extent=Extent("geom"))["extent"]
+        if extents:
+            self._extent = QgsRectangle(extents[0], extents[1], extents[2], extents[3])
+        else:
+            self._extent = QgsRectangle()
 
     def isValid(self):
         return True
 
     def crs(self):
         crs = QgsCoordinateReferenceSystem()
-        srid = inspect(self.model.geom).expression.type.srid
+        srid = self.model.geom.field.srid
         crs.createFromString(f"EPSG:{srid}")
         return crs
 

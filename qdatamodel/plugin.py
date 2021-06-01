@@ -1,5 +1,6 @@
 import os.path
 
+import django
 from qgis.core import (
     Qgis,
     QgsProject,
@@ -43,6 +44,9 @@ class Plugin:
         # QgsProviderRegistry.instance().unregisterProvider(Provider.providerKey())
 
     def init_datamodel(self, checked):
+
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qdatamodel.model.settings")
+        django.setup()
 
         structure = QgsVectorLayer("Structure", "Structures", Provider.providerKey())
         QgsProject.instance().addMapLayer(structure)

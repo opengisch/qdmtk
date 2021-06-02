@@ -14,7 +14,3 @@ class Structure(models.Model):
 
 class Building(Structure):
     stories_count = models.IntegerField()
-
-
-class Monument(Structure):
-    tripadvisor_rating = models.IntegerField()

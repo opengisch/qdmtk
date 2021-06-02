@@ -40,9 +40,11 @@ class Plugin:
         self.toolbar = self.iface.addToolBar("Datamodel")
 
         self.datamodel_action = QAction(
-            QIcon(os.path.join(self.plugin_dir, "icon.svg")), "Datamodel", self.toolbar
+            QIcon(os.path.join(self.plugin_dir, "icon.svg")),
+            "Load datamodel layers",
+            self.toolbar,
         )
-        self.datamodel_action.triggered.connect(self.init_datamodel)
+        self.datamodel_action.triggered.connect(self.load_layers)
         self.toolbar.addAction(self.datamodel_action)
 
         self.migrate_action = QAction("Migrate", self.toolbar)
@@ -72,7 +74,7 @@ class Plugin:
             self.iface.mainWindow(), "Current migrations state", out.getvalue()
         )
 
-    def init_datamodel(self, checked):
+    def load_layers(self, checked):
 
         for model in django.apps.apps.get_models():
             layer = QgsVectorLayer(

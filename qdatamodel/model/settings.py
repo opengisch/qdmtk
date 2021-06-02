@@ -9,7 +9,7 @@ DATABASES = {
 }
 
 INSTALLED_APPS = [
-    "qdatamodel.model.core",
+    "qdatamodel.model.qdmtkdemo",
 ]
 
 GDAL_LIBRARY_PATH = r"C:\OSGeo4W\bin\gdal302.dll"

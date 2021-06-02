@@ -6,8 +6,8 @@ from django.db import migrations
 
 
 def seed_data(apps, schema_editor):
-    Structure = apps.get_model("core", "Structure")
-    Building = apps.get_model("core", "Building")
+    Structure = apps.get_model("qdmtkdemo", "Structure")
+    Building = apps.get_model("qdmtkdemo", "Building")
 
     for i in range(1000):
         x = random.uniform(6.10, 6.15)
@@ -28,7 +28,7 @@ def seed_data(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("core", "0001_initial"),
+        ("qdmtkdemo", "0001_initial"),
     ]
 
     operations = [migrations.RunPython(seed_data)]

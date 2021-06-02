@@ -32,11 +32,11 @@ class Migration(migrations.Migration):
                         parent_link=True,
                         primary_key=True,
                         serialize=False,
-                        to="core.structure",
+                        to="qdmtkdemo.structure",
                     ),
                 ),
                 ("stories_count", models.IntegerField()),
             ],
-            bases=("core.structure",),
+            bases=("qdmtkdemo.structure",),
         ),
     ]

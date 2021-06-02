@@ -82,7 +82,10 @@ class FeatureIterator(QgsAbstractFeatureIterator):
                 geom__bboverlaps=GEOSGeometry(filter_rect.asWktPolygon())
             )
 
-        # TODO : implement rest of filter, such as order_by, select by id, etc. (and expression ?)
+        if self.request.filterType() == QgsFeatureRequest.FilterType.FilterFid:
+            query = query.filter(id=self.request.filterFid())
+
+        # TODO : implement rest of filter, such as order_by, etc. (and expression ?)
 
         self.iterator = iter(query.all())
         return True

@@ -79,7 +79,7 @@ class FeatureIterator(QgsAbstractFeatureIterator):
             # if self.request.destinationCrs().isValid() and self.request.destinationCrs() != self.source.provider.crs():
             #     transform = QgsCoordinateTransform(self.source.provider.crs(), self.request.destinationCrs(), self.request.transformContext())
             query = query.filter(
-                geom__intersects=GEOSGeometry(filter_rect.asWktPolygon())
+                geom__bboverlaps=GEOSGeometry(filter_rect.asWktPolygon())
             )
 
         # TODO : implement rest of filter, such as order_by, select by id, etc. (and expression ?)

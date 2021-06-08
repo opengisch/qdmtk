@@ -24,7 +24,7 @@ class Plugin:
         self.plugin_dir = os.path.dirname(__file__)
 
         # Init Django
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qdatamodel.model.settings")
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qdmtk.model.settings")
         django.setup()
 
     def initGui(self):

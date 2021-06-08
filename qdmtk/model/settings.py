@@ -4,12 +4,12 @@ import tempfile
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.spatialite",
-        "NAME": os.path.join(tempfile.gettempdir(), "qdatamodel.db"),
+        "NAME": os.path.join(tempfile.gettempdir(), "qdmtk.db"),
     }
 }
 
 INSTALLED_APPS = [
-    "qdatamodel.model.qdmtkdemo",
+    "qdmtk.model.qdmtkdemo",
 ]
 
 GDAL_LIBRARY_PATH = r"C:\OSGeo4W\bin\gdal302.dll"

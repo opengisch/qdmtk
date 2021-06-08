@@ -43,13 +43,13 @@ python manage.py migrate
 
 ```bash
 # 1. Make some changes to the datamodel
-vim qdatamodel/model/core/datamodel.py
+vim qdmtk/model/core/datamodel.py
 
 # 2. Autogenerate a migration
 python manage.py makemigrations
 
 # 3. Review and adapt the migration
-vim qdatamodel/model/core/migrations/0001_initial.py
+vim qdmtk/model/core/migrations/0001_initial.py
 
 # 4. Apply the migration
 python manage.py migrate

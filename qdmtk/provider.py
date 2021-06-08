@@ -109,12 +109,12 @@ class Provider(QgsVectorDataProvider):
     @classmethod
     def providerKey(cls):
         """Returns the memory provider key"""
-        return "qdatamodel_provider"
+        return "qdmtk_provider"
 
     @classmethod
     def description(cls):
         """Returns the memory provider description"""
-        return "QDatamodel Provider"
+        return "QDMTK Provider"
 
     @classmethod
     def createProvider(cls, uri, providerOptions, flags=QgsDataProvider.ReadFlags()):

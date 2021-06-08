@@ -1,12 +1,12 @@
 [general]
-name=QDataModel
+name=qDMTK
 qgisMinimumVersion=3.18
-description=Datamodeling solution for QGIS
+description=QGIS datamodel toolkit
 version=dev
 author=Opengis
 email=olivier@opengis.ch
 
-about=Datamodeling solution for QGIS
+about=Datamodeling solution for QGIS based on Django
 
 tracker=https://example.com
 repository=https://example.com
@@ -16,7 +16,7 @@ repository=https://example.com
 hasProcessingProvider=no
 changelog=Version 0.0 (initial)
   - initial version
-tags=datamodel
+tags=datamodel, django, migrations
 homepage=https://example.com
 category=Vector
 icon=icon.svg

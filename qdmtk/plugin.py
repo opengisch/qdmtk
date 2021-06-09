@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management import call_command
 from qgis.core import (
     Qgis,
+    QgsCoordinateReferenceSystem,
     QgsDataSourceUri,
     QgsProject,
     QgsProviderMetadata,
@@ -109,15 +110,38 @@ class Plugin:
                 db["HOST"], db["PORT"], db["NAME"], db["USER"], db["PASSWORD"]
             )
             query = f"({model.objects.all().query})"
-            geom_field = getattr(find_geom_field(model), "name", None)
+            geom_field = find_geom_field(model)
+            geom_field.srid if geom_field else None
             key_field = getattr(find_pk_field(model), "name", None)
             uri.setDataSource(
                 None,
                 query,
-                geom_field,
+                geom_field.name if geom_field else None,
                 aKeyColumn=key_field,
             )
+            uri.setUseEstimatedMetadata(True)
+            if geom_field:
+                uri.setSrid(str(geom_field.srid))
             layer = QgsVectorLayer(uri.uri(), model.__name__, "postgres")
+            if geom_field:
+                crs = QgsCoordinateReferenceSystem()
+                crs.createFromString(f"POSTGIS:{geom_field.srid}")
+                layer.setCrs(crs)
+
+            # Loading a postgres current doesn't work because of `ERROR: function st_srid(bytea) is not unique`
+            # when loaded in QGIS. Seems to happen on layer loading when SRID is unknown, due to some ambigous
+            # type casts made by geodjango.
+            # See https://github.com/qgis/QGIS/blob/082aa7bbcb847b9ed507e808203bb23c979c4c45/src/providers/postgres/qgspostgresconn.cpp#L1966-L1972
+            # Suprisingly, setting the CRSas done above is not enough and this code still runs.
+            # We work-around this by monkey-patching the cast, but that breaks django' provider :-/
+            # TODO : find a fix to remove this monkey patch (either upstream in geodjango to have a better cast,
+            # or in QGIS to avoid this query being run)
+            from django.contrib.gis.db.backends.postgis.operations import (
+                PostGISOperations,
+            )
+
+            PostGISOperations.select = "%s::geometry"
+
             QgsProject.instance().addMapLayer(layer)
 
         self.iface.messageBar().pushMessage(

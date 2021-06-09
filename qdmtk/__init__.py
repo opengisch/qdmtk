@@ -5,7 +5,6 @@ import tempfile
 import django
 from django.apps import apps
 from django.conf import settings
-from django.contrib.gis.db.backends.postgis.operations import PostGISOperations
 
 from .exceptions import QDMTKException
 
@@ -32,11 +31,6 @@ def register_datamodel(key, installed_apps, db_settings=None):
             "ENGINE": "django.contrib.gis.db.backends.spatialite",
             "NAME": os.path.join(tempfile.gettempdir(), f"qdmtk_{key}.db"),
         }
-
-    # Monkey patching as the default casts to bytea, which leads `function st_srid(bytea) is not unique`
-    # when loaded in QGIS
-    # TODO : see if we can clearly isolate the issue and propose a fix upstream
-    PostGISOperations.select = "%s::geometry"
 
     settings.configure(
         DATABASES={"default": db_settings},

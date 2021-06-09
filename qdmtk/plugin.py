@@ -77,6 +77,8 @@ class Plugin:
 
     def load_layers(self, checked):
         for model in django.apps.apps.get_models():
+            if not getattr(model, "qdmtk_addlayer", False):
+                continue
             layer = QgsVectorLayer(
                 model.__name__, model.__name__, Provider.providerKey()
             )

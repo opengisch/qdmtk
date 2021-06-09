@@ -5,9 +5,9 @@ Adapted from example in https://github.com/qgis/QGIS/blob/master/tests/src/pytho
 
 import django
 import django.conf
+from django.contrib.gis.db import models
 from django.contrib.gis.db.models import Extent
 from django.contrib.gis.geos import GEOSGeometry
-from django.db import models
 from qgis.core import (
     NULL,
     QgsAbstractFeatureIterator,
@@ -42,8 +42,9 @@ class FeatureIterator(QgsAbstractFeatureIterator):
 
             # Geometry
             geom = QgsGeometry()
-            if row.geom is not None:
-                geom.fromWkb(row.geom.wkb.tobytes())
+            row_geom = getattr(row, self.source.provider._geom_field.name)
+            if row_geom is not None:
+                geom.fromWkb(row_geom.wkb.tobytes())
             f.setGeometry(geom)
             # self.geometryToDestinationCrs(f, self._transform)
 
@@ -78,9 +79,8 @@ class FeatureIterator(QgsAbstractFeatureIterator):
             # transform = QgsCoordinateTransform()
             # if self.request.destinationCrs().isValid() and self.request.destinationCrs() != self.source.provider.crs():
             #     transform = QgsCoordinateTransform(self.source.provider.crs(), self.request.destinationCrs(), self.request.transformContext())
-            query = query.filter(
-                geom__bboverlaps=GEOSGeometry(filter_rect.asWktPolygon())
-            )
+            lookup = f"{self.source.provider._geom_field.name}__bboverlaps"
+            query = query.filter(**{lookup: GEOSGeometry(filter_rect.asWktPolygon())})
 
         if self.request.filterType() == QgsFeatureRequest.FilterType.FilterFid:
             query = query.filter(id=self.request.filterFid())
@@ -142,6 +142,13 @@ class Provider(QgsVectorDataProvider):
                 f"Could not find model {self.uri}. Known models are {known_models}"
             )
 
+        # Find the first geometry field
+        self._geom_field = None
+        for field in self.model._meta.get_fields():
+            if isinstance(field, models.GeometryField):
+                self._geom_field = field
+                break
+
         self._extent = None
 
     def featureSource(self):
@@ -161,7 +168,9 @@ class Provider(QgsVectorDataProvider):
         return self.model.objects.values_list(field, flat=True).distinct()
 
     def wkbType(self):
-        return QgsWkbTypes.parseType(self.model.geom.field.geom_type)
+        if self._geom_field is None:
+            return QgsWkbTypes.NoGeometry
+        return QgsWkbTypes.parseType(self._geom_field.geom_type)
 
     def featureCount(self):
         return self.model.objects.count()
@@ -174,7 +183,8 @@ class Provider(QgsVectorDataProvider):
             if isinstance(field, (models.OneToOneField, models.ManyToOneRel)):
                 # Skip non-field attributes
                 continue
-            if field.name == "geom":
+            if field is self._geom_field:
+                # Skip the geometry field, which is not an attribute
                 continue
             yield field
 
@@ -206,7 +216,7 @@ class Provider(QgsVectorDataProvider):
     def addFeatures(self, flist, flags=None):
         for f in flist:
             instance = self.model()
-            instance.geom = GEOSGeometry(f.geometry().asWkt())
+            setattr(instance, self._geom_field.name, GEOSGeometry(f.geometry().asWkt()))
             for attr in self._attrs():
                 value = f.attribute(attr.name)
                 setattr(instance, attr.name, value if value != NULL else None)
@@ -229,7 +239,7 @@ class Provider(QgsVectorDataProvider):
     def changeGeometryValues(self, geometry_map):
         for fid, geometry in geometry_map.items():
             instance = self.model.objects.get(id=fid)
-            instance.geom = GEOSGeometry(geometry.asWkt())
+            setattr(instance, self._geom_field.name, GEOSGeometry(geometry.asWkt()))
             instance.save()
         return True
 
@@ -265,7 +275,9 @@ class Provider(QgsVectorDataProvider):
         return self._extent
 
     def updateExtents(self):
-        extents = self.model.objects.aggregate(extent=Extent("geom"))["extent"]
+        extents = self.model.objects.aggregate(extent=Extent(self._geom_field.name))[
+            "extent"
+        ]
         if extents:
             self._extent = QgsRectangle(extents[0], extents[1], extents[2], extents[3])
         else:
@@ -276,7 +288,7 @@ class Provider(QgsVectorDataProvider):
 
     def crs(self):
         crs = QgsCoordinateReferenceSystem()
-        srid = self.model.geom.field.srid
+        srid = self._geom_field.srid
         crs.createFromString(f"EPSG:{srid}")
         return crs
 

@@ -26,6 +26,8 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant
 
+from .utils import string_to_fid
+
 
 class FeatureIterator(QgsAbstractFeatureIterator):
     def __init__(self, source, request):
@@ -54,7 +56,9 @@ class FeatureIterator(QgsAbstractFeatureIterator):
                 f.setAttribute(attr.name, getattr(row, attr.name))
 
             f.setValid(True)
-            f.setId(row.id)
+            id = string_to_fid(row.id) if isinstance(row.id, str) else row.id
+            if id is not None:
+                f.setId(id)
             return True
         except StopIteration:
             f.setValid(False)

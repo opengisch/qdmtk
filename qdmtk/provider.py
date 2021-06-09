@@ -26,7 +26,7 @@ from qgis.core import (
 )
 from qgis.PyQt.QtCore import QVariant
 
-from .utils import string_to_fid
+from .utils import find_geom_field, string_to_fid
 
 
 class FeatureIterator(QgsAbstractFeatureIterator):
@@ -147,11 +147,7 @@ class Provider(QgsVectorDataProvider):
             )
 
         # Find the first geometry field
-        self._geom_field = None
-        for field in self.model._meta.get_fields():
-            if isinstance(field, models.GeometryField):
-                self._geom_field = field
-                break
+        self._geom_field = find_geom_field(self.model)
 
         self._extent = None
 

@@ -51,18 +51,18 @@ class Plugin:
 
 ```bash
 
-# 0. If you want to use this without depending on the QDMTK plugin being installed, or outside of QGIS
+# 0. If you want to use this without depending on the QDMTK plugin being installed (and/or outside of QGIS), we need to install qdmtk
 # TODO : publish to pypi
 pip install -e C:/Users/Olivier/Code/qdmtk
 
 # 1. Make some changes to the datamodel
-vim qdmtk/model/core/datamodel.py
+vim qdmtk/qdmtkdemo/datamodel.py
 
 # 2. Autogenerate a migration
 python manage.py makemigrations
 
 # 3. Review and adapt the migration
-vim qdmtk/model/core/migrations/0001_initial.py
+vim qdmtk/qdmtkdemo/migrations/0001_initial.py
 
 # 4. Apply the migration
 python manage.py migrate

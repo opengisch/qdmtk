@@ -42,6 +42,11 @@ python manage.py migrate
 ## Dev cycle
 
 ```bash
+
+# 0. If you want to use this without depending on the QDMTK plugin being installed, or outside of QGIS
+# TODO : publish to pypi
+pip install -e C:/Users/Olivier/Code/qdmtk
+
 # 1. Make some changes to the datamodel
 vim qdmtk/model/core/datamodel.py
 

@@ -197,19 +197,24 @@ class Provider(QgsVectorDataProvider):
     def fields(self):
         fields = QgsFields()
         for attr in self._attrs():
-            if isinstance(attr, (models.TextField, models.CharField)):
+            if isinstance(attr, models.ForeignKey):
+                field = attr.target_field
+            else:
+                field = attr
+
+            if isinstance(field, (models.TextField, models.CharField)):
                 type_ = QVariant.String
-            elif isinstance(attr, models.IntegerField):
+            elif isinstance(field, models.IntegerField):
                 type_ = QVariant.Int
-            elif isinstance(attr, (models.FloatField, models.DecimalField)):
+            elif isinstance(field, (models.FloatField, models.DecimalField)):
                 type_ = QVariant.Double
-            elif isinstance(attr, models.DateField):
+            elif isinstance(field, models.DateField):
                 type_ = QVariant.Date
-            elif isinstance(attr, models.BooleanField):
-                type_ = QVariant.Boolean
+            elif isinstance(field, models.BooleanField):
+                type_ = QVariant.Bool
             else:
                 QgsMessageLog.logMessage(
-                    f"Field type not configured : {attr.__class__.__name__} ({attr.name})",
+                    f"Field type not configured : {field.__class__.__name__} ({attr.name})",
                 )
                 type_ = QVariant.Invalid
             fields.append(QgsField(attr.name, type_))

@@ -1,0 +1,2 @@
+class QDMTKException(Exception):
+    pass

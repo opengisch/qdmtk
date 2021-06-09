@@ -23,10 +23,6 @@ class Plugin:
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
 
-        # Init Django
-        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "qdmtk.model.settings")
-        django.setup()
-
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
@@ -55,6 +51,11 @@ class Plugin:
         self.showmigrations_action.triggered.connect(self.showmigrations)
         self.toolbar.addAction(self.showmigrations_action)
 
+        # Uncomment this to load the demo datamodel
+        # from . import register_datamodel
+        # from .qdmtkdemo import config
+        # register_datamodel(config.DATAMODEL_NAME, config.INSTALLED_APPS, config.DATABASE)
+
     def unload(self):
         self.iface.mainWindow().removeToolBar(self.toolbar)
         # seems this does not exist ? can we still autoreload
@@ -75,7 +76,6 @@ class Plugin:
         )
 
     def load_layers(self, checked):
-
         for model in django.apps.apps.get_models():
             layer = QgsVectorLayer(
                 model.__name__, model.__name__, Provider.providerKey()

@@ -30,14 +30,22 @@ This has many advantages over a more naive approach using plain SQL init scripts
 - No integration with the Django user/permissions framework (the ORM connects directly to the database, hence only native Postgres permissions can be used)
 - Probably quite slow. For better performance, we may try proxying native Postgres/Sqlite provider for reading (using the ORM to build the select statement with inheritance), and Django instances only for update queries
 
+## Integrations in a QGIS plugin
 
-## Usage
+To register a datamodels from a QGIS plugin, add the following code to the `initGui` method:
 
-```bash
-# 1. Initialize the datamodel
-python manage.py migrate
+```python
+# ...
+from qdmtk import register_datamodel
+
+class Plugin:
+    # ...
+    def initGui(self):
+        # ...
+        datamodel_key = "demo"  # unique name of you plugin
+        installed_apps = ["qdmtk.model.qdmtkdemo"]  # list of qualified paths to django apps
+        register_datamodel(datamodel_key, installed_apps)
 ```
-
 
 ## Dev cycle
 

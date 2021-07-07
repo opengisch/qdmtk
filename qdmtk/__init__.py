@@ -32,13 +32,22 @@ def register_datamodel(key, installed_apps, db_settings=None):
             "NAME": os.path.join(tempfile.gettempdir(), f"qdmtk_{key}.db"),
         }
 
+    # Allow to configure GDAL/GEOS/Spatialite libraries from env vars
+    # see https://docs.djangoproject.com/en/3.2/ref/contrib/gis/install/geolibs/#geos-library-path
+    GDAL_LIBRARY_PATH_ENV = os.getenv("GDAL_LIBRARY_PATH")
+    GEOS_LIBRARY_PATH_ENV = os.getenv("GEOS_LIBRARY_PATH")
+    SPATIALITE_LIBRARY_PATH_ENV = os.getenv("SPATIALITE_LIBRARY_PATH")
+    additionnal_settings = {}
+    if GDAL_LIBRARY_PATH_ENV:
+        additionnal_settings["GDAL_LIBRARY_PATH"] = GDAL_LIBRARY_PATH_ENV
+    if GEOS_LIBRARY_PATH_ENV:
+        additionnal_settings["GEOS_LIBRARY_PATH"] = GEOS_LIBRARY_PATH_ENV
+    if SPATIALITE_LIBRARY_PATH_ENV:
+        additionnal_settings["SPATIALITE_LIBRARY_PATH"] = SPATIALITE_LIBRARY_PATH_ENV
+
     settings.configure(
         DATABASES={"default": db_settings},
         INSTALLED_APPS=installed_apps,
-        # TODO : remove this and document setting through envvar
-        # see https://docs.djangoproject.com/en/3.2/ref/contrib/gis/install/#ld-library-path-environment-variable
-        GDAL_LIBRARY_PATH=r"C:\OSGeo4W\bin\gdal302.dll",
-        GEOS_LIBRARY_PATH=r"C:\OSGeo4W\bin\geos_c.dll",
-        SPATIALITE_LIBRARY_PATH=r"C:\OSGeo4W\bin\mod_spatialite.dll",
+        **additionnal_settings,
     )
     django.setup()

@@ -84,13 +84,12 @@ python manage.py migrate
 
 ### GDAL/GEOS paths
 
-As per [Django's documentation](https://docs.djangoproject.com/en/3.2/ref/contrib/gis/install/#ld-library-path-environment-variable), you may need to manually specify paths to GDAL and GEOS libraries. This can be done with the `LD_LIBRARY_PATH` env variable.
+Depending on your environment, you may need to manually specify paths to GDAL and GEOS libraries. This can be done with env variables.
 ```
-# Linux bash
-export LD_LIBRARY_PATH=/usr/local/lib
-
 # Windows Powershell
-$Env:LD_LIBRARY_PATH = "C:\OSGeo4W\bin"
+$Env:GDAL_LIBRARY_PATH = "C:\OSGeo4W\bin\gdal302.dll"
+$Env:GEOS_LIBRARY_PATH = "C:\OSGeo4W\bin\geos_c.dll"
+$Env:SPATIALITE_LIBRARY_PATH = "C:\OSGeo4W\bin\mod_spatialite.dll"
 ```
 
 ### Django

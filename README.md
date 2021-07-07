@@ -9,7 +9,7 @@ This has many advantages over a more naive approach using plain SQL init scripts
 - Integrates with Django migrations infrastructure, both for initializing and upgrading the datamodel, allowing multiple instances of the same datamodel to be upgraded independently.
 - Same definitions can be used for all databases supported by GeoDjango (Postgis, Spatialite, Mysql, Oracle)
 - Full support for type of inheritance supported by Django (concrete table, joined table)
-- Ability to use the Django ORM for advanced business logic (custom plugin actions, web interface, etc.), including third party packages such as `django-compoutedfields`, `django-pgtrigger` or `django-migrate-sql-deux`.
+- Ability to use the Django ORM for advanced business logic (custom plugin actions, web interface, etc.), including third party packages such as `django-computedfields`, `django-pgtrigger` or `django-migrate-sql-deux`.
 - Ability to user other Django facilities such as management commands, shell, fixtures, error reporting, etc.
 - *TODO* Preconfigured pdoc setup to auto-generate documentation of the datamodel.
 

@@ -82,6 +82,17 @@ python manage.py migrate
 
 ## Notes
 
+### GDAL/GEOS paths
+
+As per [Django's documentation](https://docs.djangoproject.com/en/3.2/ref/contrib/gis/install/#ld-library-path-environment-variable), you may need to manually specify paths to GDAL and GEOS libraries. This can be done with the `LD_LIBRARY_PATH` env variable.
+```
+# Linux bash
+export LD_LIBRARY_PATH=/usr/local/lib
+
+# Windows Powershell
+$Env:LD_LIBRARY_PATH = "C:\OSGeo4W\bin"
+```
+
 ### Django
 
 - Schemas not supported out of the box. We could probably add a hack that moves all tables to custom schemas after migration, and add Postgres search paths according to loaded apps (see https://stackoverflow.com/a/28452103/13690651).

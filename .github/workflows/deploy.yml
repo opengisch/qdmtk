@@ -1,10 +1,13 @@
+
+name: Deploy
+
 on:
   push:
     tags:
-      - "*"
+      - "v*"
 
 jobs:
-  deploy-to-repo:
+  release-qgis-repo:
     name: Deploy to QGIS plugin repository
     runs-on: ubuntu-18.04
 
@@ -23,4 +26,34 @@ jobs:
         env:
           OSGEO_USERNAME: ${{ secrets.OSGEO_USERNAME }}
           OSGEO_PASSWORD: ${{ secrets.OSGEO_PASSWORD }}
-        run: qgis-plugin-ci release --osgeo-username "$OSGEO_USERNAME" --osgeo-password "$OSGEO_PASSWORD" "${GITHUB_REF##*/}"
+        run: qgis-plugin-ci release --osgeo-username "$OSGEO_USERNAME" --osgeo-password "$OSGEO_PASSWORD" "${GITHUB_REF##*/v}"
+
+
+  release-pypi:
+    name: Release to Pypi
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Inject version name
+      run: sed -i "s/dev/${GITHUB_REF##*/v}/" qdmtk/version.py
+
+    - name: Install pypa/build
+      run: pip install build
+
+    - name: Build a binary wheel and a source tarball
+      run: python -m build --sdist --outdir dist/
+
+    - name: Publish distribution
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@v1.4.2
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        repository_url: https://test.pypi.org/legacy/  # TODO : remove

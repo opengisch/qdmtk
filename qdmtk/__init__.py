@@ -7,6 +7,7 @@ from django.apps import apps
 from django.conf import settings
 
 from .exceptions import QDMTKException
+from .version import __version__  # noqa
 
 
 def classFactory(iface):

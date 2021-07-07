@@ -64,8 +64,7 @@ class Plugin:
 ```bash
 
 # 0. If you want to use this without depending on the QDMTK plugin being installed (and/or outside of QGIS), we need to install qdmtk
-# TODO : publish to pypi
-pip install https://github.com/opengisch/qdmtk/
+pip install qdmtk
 
 # 1. Make some changes to the datamodel
 vim qdmtk/qdmtkdemo/datamodel.py
@@ -79,6 +78,10 @@ vim qdmtk/qdmtkdemo/migrations/0001_initial.py
 # 4. Apply the migration
 python manage.py migrate
 ```
+
+## Deployment
+
+QDMTK is deployed automatically on git tags `v*` to both the QGIS plugin repository and PyPi.
 
 ## Notes
 

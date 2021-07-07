@@ -2,11 +2,6 @@
 import os
 import tempfile
 
-import django
-from django.apps import apps
-from django.conf import settings
-
-from .exceptions import QDMTKException
 from .version import __version__  # noqa
 
 
@@ -20,6 +15,12 @@ def register_datamodel(key, installed_apps, db_settings=None):
     """
     This configures the database connection and installed app django settings
     """
+    import django
+    from django.apps import apps
+    from django.conf import settings
+
+    from .exceptions import QDMTKException
+
     if apps.ready:
         raise QDMTKException(
             "Only one datamodel can be registered simulatenously. If you are using multiple datamodels, you need to use separate user profiles."

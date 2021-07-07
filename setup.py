@@ -1,8 +1,11 @@
+import os
 from distutils.core import setup
 
 from setuptools import find_packages, setup
 
 from qdmtk import __version__
+
+requirements_path = os.path.join("qdmtk", "requirements.txt")
 
 setup(
     name="QDMTK",
@@ -12,6 +15,6 @@ setup(
     author_email="olivier@opengis.ch",
     url="https://github.com/opengisch/qdmtk",
     packages=find_packages(),
-    install_requires=open("requirements.txt", encoding="utf-8").read().splitlines(),
+    install_requires=open(requirements_path, encoding="utf-8").read().splitlines(),
     include_package_data=True,
 )

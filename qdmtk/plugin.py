@@ -20,7 +20,7 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMessageBox
 
 from . import datamodels_registry, prepare_django, register_datamodel
-from .demo_models import config
+from .contrib.demo_models import config
 from .provider import Provider
 from .utils import find_geom_field, find_pk_field
 

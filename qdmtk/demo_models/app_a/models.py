@@ -5,7 +5,7 @@ class Structure(models.Model):
     qdmtk_addlayer = True
 
     id = models.BigAutoField(primary_key=True)
-    # geom = models.PointField(srid=4326)
+    geom = models.PointField(srid=4326)
     name = models.CharField(max_length=255)
     label = models.CharField(max_length=255)
 

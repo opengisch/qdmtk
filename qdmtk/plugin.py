@@ -183,7 +183,7 @@ class Plugin:
             # when loaded in QGIS. Seems to happen on layer loading when SRID is unknown, due to some ambigous
             # type casts made by geodjango.
             # See https://github.com/qgis/QGIS/blob/082aa7bbcb847b9ed507e808203bb23c979c4c45/src/providers/postgres/qgspostgresconn.cpp#L1966-L1972
-            # Suprisingly, setting the CRSas done above is not enough and this code still runs.
+            # Suprisingly, setting the CRS as done above is not enough and this code still runs.
             # We work-around this by monkey-patching the cast, but that breaks django' provider :-/
             # TODO : find a fix to remove this monkey patch (either upstream in geodjango to have a better cast,
             # or in QGIS to avoid this query being run)

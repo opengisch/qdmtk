@@ -2,7 +2,8 @@
 
 import django.contrib.gis.db.models.fields
 import django.db.models.deletion
-from django.db import migrations, models
+from django.contrib.gis.db import models
+from django.db import migrations
 
 
 class Migration(migrations.Migration):
@@ -26,6 +27,7 @@ class Migration(migrations.Migration):
                         to="app_b.owner",
                     ),
                 ),
+                ("geom", models.PolygonField(srid=4326)),
             ],
         ),
     ]

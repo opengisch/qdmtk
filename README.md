@@ -2,10 +2,11 @@
 
 QDMTK is a framework to build, maintain and use advanced datamodels in QGIS using the Django ORM.
 
-It offers :
-- a QGIS plugin allowing to show and run migrations
-- an infrastructure allowing integration in QGIS plugins
-- a provider allowing to load the models directly as QGIS layers with all Django ORM benefits (inheritance, signals, custom save logic, etc)
+It offers a QGIS plugin with the following features:
+- an infrastructure allowing to integrate Django datamodels in QGIS plugins
+- a GUI to show and run migrations
+- a provider to load Django models as QGIS layers (with all Django ORM benefits, inheritance, signals, custom save logic, etc)
+- an alternative native way to load the Django models using a regular Postgres layer (readonly) using the ORM's generated query
 
 
 Using the Django ORM has many advantages over a more naive approach using plain SQL init scripts:
@@ -62,8 +63,8 @@ class Plugin:
 
     def __init__(self, iface):
         # ...
-        datamodel_key = "demo"  # unique name of you plugin
-        installed_apps = ["qdmtk.model.qdmtkdemo"]  # list of django apps, see django settings docs
+        datamodel_key = "demo"  # unique name of your datamodel
+        installed_apps = ["qdmtk.demo_models.app_a", "qdmtk.demo_models.app_b"]  # list of django apps, see django settings docs
         database_settings = {  # database connection settings, see django settings docs
             "ENGINE": "django.contrib.gis.db.backends.spatialite",
             "NAME": os.path.join(tempfile.gettempdir(), f"mydatabase.db"),
@@ -106,7 +107,7 @@ QDMTK is deployed automatically on git tags `v*` to both the QGIS plugin reposit
 
 ### GDAL/GEOS paths
 
-Depending on your environment, you may need to manually specify paths to GDAL and GEOS libraries. This can be done with env variables.
+When used within QGIS, Spatial libraries should be found, but when running this as standalone, you may need to manually specify paths to GDAL and GEOS libraries. This can be done with the following env variables.
 ```
 # Windows Powershell
 $Env:GDAL_LIBRARY_PATH = "C:\OSGeo4W\bin\gdal302.dll"

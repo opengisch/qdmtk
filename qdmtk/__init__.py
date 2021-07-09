@@ -1,6 +1,5 @@
 # from . import settings as qdmtk_settings
 import os
-import tempfile
 
 import django
 from django.apps import apps
@@ -18,16 +17,13 @@ def classFactory(iface):
     return Plugin(iface)
 
 
-def register_datamodel(datamodel_key, installed_apps, db_settings=None):
+def register_datamodel(datamodel_key, installed_apps, db_settings):
     """
     This registers the database connection and installed apps for the given datamodel.
     These will be used to configure Django when prepare_django() is called.
     """
 
     from .exceptions import QDMTKException
-
-    # from qgis.core import QgsMessageLog
-    # QgsMessageLog.logMessage(f"Registering datamodel {datamodel_key} with {installed_apps=} {db_settings=}", "QDMTK")
 
     if apps.ready:
         raise QDMTKException(
@@ -38,14 +34,6 @@ def register_datamodel(datamodel_key, installed_apps, db_settings=None):
         "apps": installed_apps,
         "db_settings": db_settings,
     }
-
-    # TODO : replace this by integrated GUI to configure the dataprovider
-    # per datamodel key, ideally by selecting existing configs from the browser
-    if db_settings is None:
-        db_settings = {
-            "ENGINE": "django.contrib.gis.db.backends.spatialite",
-            "NAME": os.path.join(tempfile.gettempdir(), f"qdmtk_{datamodel_key}.db"),
-        }
 
 
 def prepare_django():

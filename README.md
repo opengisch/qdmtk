@@ -1,5 +1,7 @@
 # QDMTK - QGIS datamodel tookit
 
+**WARNING - THIS IS IN EARLY DEVELOPEMENT, NOT STABLE/USABLE YET**
+
 QDMTK is a framework to build, maintain and use advanced datamodels in QGIS using the Django ORM.
 
 It offers a QGIS plugin with the following features:

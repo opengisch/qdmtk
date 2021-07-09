@@ -1,9 +1,4 @@
-# from . import settings as qdmtk_settings
 import os
-
-import django
-from django.apps import apps
-from django.conf import settings
 
 from .version import __version__  # noqa
 
@@ -22,6 +17,7 @@ def register_datamodel(datamodel_key, installed_apps, db_settings):
     This registers the database connection and installed apps for the given datamodel.
     These will be used to configure Django when prepare_django() is called.
     """
+    from django.apps import apps
 
     from .exceptions import QDMTKException
 
@@ -40,6 +36,9 @@ def prepare_django():
     """
     Sets up Django with all registered apps and database settings
     """
+    import django
+    from django.apps import apps
+    from django.conf import settings
 
     if apps.ready:
         # already done

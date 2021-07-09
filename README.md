@@ -1,10 +1,15 @@
 # QDMTK - QGIS datamodel tookit
 
-QDMTK is a framework to build, maintain and use advanced datamodels in QGIS.
+QDMTK is a framework to build, maintain and use advanced datamodels in QGIS using the Django ORM.
 
-The datamodel itself is defined using Django models loaded directly in QGIS with a dedicated python provider.
+It offers :
+- a QGIS plugin allowing to show and run migrations
+- an infrastructure allowing integration in QGIS plugins
+- a provider allowing to load the models directly as QGIS layers with all Django ORM benefits (inheritance, signals, custom save logic, etc)
 
-This has many advantages over a more naive approach using plain SQL init scripts
+
+Using the Django ORM has many advantages over a more naive approach using plain SQL init scripts:
+
 - Clean datamodel definition, structured in the well known Django way.
 - Integrates with Django migrations infrastructure, both for initializing and upgrading the datamodel, allowing multiple instances of the same datamodel to be upgraded independently.
 - Same definitions can be used for all databases supported by GeoDjango (Postgis, Spatialite, Mysql, Oracle)
@@ -24,10 +29,13 @@ This has many advantages over a more naive approach using plain SQL init scripts
 - [ ] Improve migration feedback when missing migrations (see https://github.com/django/django/pull/14246)
 - [ ] Autoconfigure QGIS layers (relation widgets, default label, readony fields, etc)
 - [ ] Think about how QDMTK and datamodels can be distributed (can we separate distribution, can we use multiple independent models/databases, etc)
+- [ ] As contrib apps for Postgres:
+  - [ ] Django Users -> Postgres user syncing to allow enforcing permissions at QGIS level
+  - [ ] Automatically organize tables in schemas according to apps
 
 ## Limitations
 
-- No integration with the Django user/permissions framework (the ORM connects directly to the database, hence only native Postgres permissions can be used)
+- No integration with the Django user/permissions framework yet (the ORM connects directly to the database, hence only native Postgres permissions can be used)
 - Probably quite slow. For better performance, we may try proxying native Postgres/Sqlite provider for reading (using the ORM to build the select statement with inheritance), and Django instances only for update queries
 
 ## Conventions
@@ -44,19 +52,28 @@ class MyModel(models.Model):
 
 ## Integrations in a QGIS plugin
 
-To register a datamodels from a QGIS plugin, add the following code to the `initGui` method:
+To register a datamodels from a QGIS plugin, add the following code to the `__init__` and `initGui` methods:
 
 ```python
 # ...
-from qdmtk import register_datamodel
+from qdmtk import register_datamodel, prepare_django
 
 class Plugin:
-    # ...
-    def initGui(self):
+
+    def __init__(self, iface):
         # ...
         datamodel_key = "demo"  # unique name of you plugin
-        installed_apps = ["qdmtk.model.qdmtkdemo"]  # list of qualified paths to django apps
-        register_datamodel(datamodel_key, installed_apps)
+        installed_apps = ["qdmtk.model.qdmtkdemo"]  # list of django apps, see django settings docs
+        database_settings = {  # database connection settings, see django settings docs
+            "ENGINE": "django.contrib.gis.db.backends.spatialite",
+            "NAME": os.path.join(tempfile.gettempdir(), f"mydatabase.db"),
+        }
+        register_datamodel(datamodel_key, installed_apps, database_settings)
+
+        # This is only required if you don't want to depend on the QDMTK plugin
+        iface.initializationCompleted.connect(prepare_django)
+
+    # ...
 ```
 
 ## Dev cycle
@@ -85,6 +102,8 @@ QDMTK is deployed automatically on git tags `v*` to both the QGIS plugin reposit
 
 ## Notes
 
+###
+
 ### GDAL/GEOS paths
 
 Depending on your environment, you may need to manually specify paths to GDAL and GEOS libraries. This can be done with env variables.
@@ -95,6 +114,6 @@ $Env:GEOS_LIBRARY_PATH = "C:\OSGeo4W\bin\geos_c.dll"
 $Env:SPATIALITE_LIBRARY_PATH = "C:\OSGeo4W\bin\mod_spatialite.dll"
 ```
 
-### Django
+### Schemas
 
-- Schemas not supported out of the box. We could probably add a hack that moves all tables to custom schemas after migration, and add Postgres search paths according to loaded apps (see https://stackoverflow.com/a/28452103/13690651).
+Schemas are not supported out of the box. We could probably add a hack that moves all tables to custom schemas after migration, and add Postgres search paths according to loaded apps (see https://stackoverflow.com/a/28452103/13690651).

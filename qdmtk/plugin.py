@@ -2,12 +2,15 @@ import os.path
 from io import StringIO
 
 import django
+from django.apps import apps
 from django.conf import settings
 from django.core.management import call_command
+from django.db.utils import OperationalError
 from qgis.core import (
     Qgis,
     QgsCoordinateReferenceSystem,
     QgsDataSourceUri,
+    QgsMessageLog,
     QgsProject,
     QgsProviderMetadata,
     QgsProviderRegistry,
@@ -16,8 +19,12 @@ from qgis.core import (
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMessageBox
 
+from . import datamodels_registry, prepare_django, register_datamodel
+from .demo_models import config
 from .provider import Provider
 from .utils import find_geom_field, find_pk_field
+
+QgsMessageLog.logMessage("loading qdmtk file", "QDMTK")
 
 
 class Plugin:
@@ -26,6 +33,12 @@ class Plugin:
     def __init__(self, iface):
         self.iface = iface
         self.plugin_dir = os.path.dirname(__file__)
+
+        # Load the demo datamodel
+        register_datamodel(config.PROJECTNAME_A, config.APPS_A, config.DATABASE_A)
+        register_datamodel(config.PROJECTNAME_B, config.APPS_B, config.DATABASE_B)
+
+        iface.initializationCompleted.connect(prepare_django)
 
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
@@ -74,15 +87,53 @@ class Plugin:
         # QgsProviderRegistry.instance().unregisterProvider(Provider.providerKey())
 
     def migrate(self):
+        apps_names = {app.name: app.label for app in apps.get_app_configs()}
+
         out = StringIO()
-        call_command("migrate", stdout=out)
+        for datamodel_key, datamodel_opts in datamodels_registry.items():
+            apps_to_migrate = [
+                apps_names[app_name] for app_name in datamodel_opts["apps"]
+            ]
+            out.write(f"--- {datamodel_key} ---\n")
+            for app_to_migrate in apps_to_migrate:
+                # app_labels = datamodels_registry[datamodel_key]["apps"]
+                QgsMessageLog.logMessage(
+                    f"Will migrate {app_to_migrate} to {datamodel_key}", "QDMTK"
+                )
+                try:
+                    call_command(
+                        "migrate",
+                        app_to_migrate,
+                        "--database",
+                        datamodel_key,
+                        stdout=out,
+                    )
+                except OperationalError as e:
+                    out.write(f"Could not connect ({e})\n")
+                out.flush()
         QMessageBox.information(
             self.iface.mainWindow(), "Migration results", out.getvalue()
         )
 
     def showmigrations(self):
+        apps_names = {app.name: app.label for app in apps.get_app_configs()}
         out = StringIO()
-        call_command("showmigrations", stdout=out)
+        for datamodel_key, datamodel_opts in datamodels_registry.items():
+            apps_to_migrate = [
+                apps_names[app_name] for app_name in datamodel_opts["apps"]
+            ]
+            out.write(f"--- {datamodel_key} ---\n")
+            try:
+                call_command(
+                    "showmigrations",
+                    *apps_to_migrate,
+                    "--database",
+                    datamodel_key,
+                    stdout=out,
+                )
+            except OperationalError as e:
+                out.write(f"Could not connect ({e})\n")
+            out.flush()
         QMessageBox.information(
             self.iface.mainWindow(), "Current migrations state", out.getvalue()
         )

@@ -2,7 +2,14 @@
 import os
 import tempfile
 
+import django
+from django.apps import apps
+from django.conf import settings
+
 from .version import __version__  # noqa
+
+# This will hold all registered datamodels
+datamodels_registry = {}
 
 
 def classFactory(iface):
@@ -11,28 +18,44 @@ def classFactory(iface):
     return Plugin(iface)
 
 
-def register_datamodel(key, installed_apps, db_settings=None):
+def register_datamodel(datamodel_key, installed_apps, db_settings=None):
     """
-    This configures the database connection and installed app django settings
+    This registers the database connection and installed apps for the given datamodel.
+    These will be used to configure Django when prepare_django() is called.
     """
-    import django
-    from django.apps import apps
-    from django.conf import settings
 
     from .exceptions import QDMTKException
 
+    # from qgis.core import QgsMessageLog
+    # QgsMessageLog.logMessage(f"Registering datamodel {datamodel_key} with {installed_apps=} {db_settings=}", "QDMTK")
+
     if apps.ready:
         raise QDMTKException(
-            "Only one datamodel can be registered simulatenously. If you are using multiple datamodels, you need to use separate user profiles."
+            "Django was already setup. Ensure `prepare_django` is only called after all datamodels are registered."
         )
+
+    datamodels_registry[datamodel_key] = {
+        "apps": installed_apps,
+        "db_settings": db_settings,
+    }
 
     # TODO : replace this by integrated GUI to configure the dataprovider
     # per datamodel key, ideally by selecting existing configs from the browser
     if db_settings is None:
         db_settings = {
             "ENGINE": "django.contrib.gis.db.backends.spatialite",
-            "NAME": os.path.join(tempfile.gettempdir(), f"qdmtk_{key}.db"),
+            "NAME": os.path.join(tempfile.gettempdir(), f"qdmtk_{datamodel_key}.db"),
         }
+
+
+def prepare_django():
+    """
+    Sets up Django with all registered apps and database settings
+    """
+
+    if apps.ready:
+        # already done
+        return
 
     # Allow to configure GDAL/GEOS/Spatialite libraries from env vars
     # see https://docs.djangoproject.com/en/3.2/ref/contrib/gis/install/geolibs/#geos-library-path
@@ -47,9 +70,27 @@ def register_datamodel(key, installed_apps, db_settings=None):
     if SPATIALITE_LIBRARY_PATH_ENV:
         additionnal_settings["SPATIALITE_LIBRARY_PATH"] = SPATIALITE_LIBRARY_PATH_ENV
 
+    # Collect all databases
+    databases = {k: v["db_settings"] for k, v in datamodels_registry.items()}
+    # Contactenate apps from all datamodels
+    installed_apps = []
+    for datamodel in datamodels_registry.values():
+        installed_apps.extend(datamodel["apps"])
+
+    # Set a default database if needed (required by django)
+    if "default" not in databases:
+        databases["default"] = {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+
+    # from qgis.core import QgsMessageLog
+    # QgsMessageLog.logMessage(f"Setting up Django with {databases=} {installed_apps=}", "QDMTK")
+
     settings.configure(
-        DATABASES={"default": db_settings},
+        DATABASES=databases,
         INSTALLED_APPS=installed_apps,
+        DATABASE_ROUTERS=["qdmtk.router.QDMTKDatabaseRouter"],
         **additionnal_settings,
     )
     django.setup()

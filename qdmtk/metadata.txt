@@ -6,7 +6,7 @@ version=dev
 author=Opengis
 email=olivier@opengis.ch
 
-about=Datamodeling solution for QGIS based on Django
+about=Datamodeling solution for QGIS based on Django (WARNING - THIS IS IN EARLY DEVELOPEMENT, NOT STABLE/USABLE YET)
 
 tracker=https://github.com/opengisch/qdmtk/issues
 repository=https://github.com/opengisch/qdmtk
